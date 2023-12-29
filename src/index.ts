@@ -23,6 +23,23 @@ export function plugin(bot: Bot) {
             }
         }))
     }
+    bot.simple_voice_chat.joinGroup = (group: Buffer, password: string = "") => {
+        bot.simple_voice_chat.sendUDP(SVC_OBJ.PacketManager.protoDef.createPacketBuffer("packet", {
+            "id": "JoinGroupPacket",
+            "data": {
+                "group": group,
+                "password": password.length > 0 && SVC_Data.groups.get(group).hasPassword ? password : undefined
+            } 
+        }))
+    }
+    bot.simple_voice_chat.joinGroupName = (groupname: string, password: string = "") => {
+        for (const group of SVC_Data.groups) {
+            if (group[1].name == groupname) {
+                bot.simple_voice_chat.joinGroup(group[0], group[1].hasPassword ? password : "")
+                return
+            }
+        }
+    }
     bot.simple_voice_chat.protodef = SVC_OBJ.PacketManager.protoDef
     bot.simple_voice_chat.data = SVC_Data
     bot.simple_voice_chat.AudioPlayer = SVC_OBJ.AudioPlayer
@@ -31,6 +48,8 @@ export function plugin(bot: Bot) {
 interface SimpleVoiceChat {
     sendUDP(payload: Buffer);
     sendPCM(payload: Buffer);
+    joinGroup(group: Buffer, password: string)
+    joinGroupName(groupname: string, password: string)
     protodef;
     data: SVC_Data;
     AudioPlayer: AudioPlayer
