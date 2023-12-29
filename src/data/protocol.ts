@@ -177,7 +177,7 @@ export default {
 					}
 				]
 			],
-			"join_group": [
+			"set_group": [
 				"container",
 				[
 					{

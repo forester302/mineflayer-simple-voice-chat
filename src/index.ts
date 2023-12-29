@@ -24,13 +24,10 @@ export function plugin(bot: Bot) {
         }))
     }
     bot.simple_voice_chat.joinGroup = (group: Buffer, password: string = "") => {
-        bot.simple_voice_chat.sendUDP(SVC_OBJ.PacketManager.protoDef.createPacketBuffer("packet", {
-            "id": "JoinGroupPacket",
-            "data": {
-                "group": group,
-                "password": password.length > 0 && SVC_Data.groups.get(group).hasPassword ? password : undefined
-            } 
-        }))
+        bot._client.write("custom_payload", {channel:"voicechat:set_group", data: SVC_OBJ.PacketManager.createPacket("set_group", {
+            "uuid": group,
+            "password": password.length > 0 ? password : undefined
+        })})
     }
     bot.simple_voice_chat.joinGroupName = (groupname: string, password: string = "") => {
         for (const group of SVC_Data.groups) {
@@ -40,6 +37,9 @@ export function plugin(bot: Bot) {
             }
         }
     }
+    bot.simple_voice_chat.leaveGroup = () => {
+        bot._client.write("custom_payload", {channel:"voicechat:leave_group", data: Buffer.from([])})
+    }
     bot.simple_voice_chat.protodef = SVC_OBJ.PacketManager.protoDef
     bot.simple_voice_chat.data = SVC_Data
     bot.simple_voice_chat.AudioPlayer = SVC_OBJ.AudioPlayer
@@ -48,11 +48,12 @@ export function plugin(bot: Bot) {
 interface SimpleVoiceChat {
     sendUDP(payload: Buffer);
     sendPCM(payload: Buffer);
-    joinGroup(group: Buffer, password: string)
-    joinGroupName(groupname: string, password: string)
+    joinGroup(group: Buffer, password: string);
+    joinGroupName(groupname: string, password: string);
+    leaveGroup();
     protodef;
     data: SVC_Data;
-    AudioPlayer: AudioPlayer
+    AudioPlayer: AudioPlayer;
 }
 
 declare module 'mineflayer' {
