@@ -63,42 +63,40 @@ export default class AudioPlayer {
 		if (!fs.existsSync(`audio/${file}`)) {
 			return false
 		}
-		//Convert to PCM
-		let pcmBuffer: Buffer = await new Promise((resolve, reject) => {
-			let chunks: Uint8Array[] = [];
+		if (!fs.existsSync(`pcm/${file}.pcm`)) {
+			//Convert to PCM
+			let pcmBuffer: Buffer = await new Promise((resolve, reject) => {
+				let chunks: Uint8Array[] = [];
 
-			const ffmpegCommand = ffmpeg(`audio/${file}`)
-				.audioCodec('pcm_s16le')
-				.format('s16le')
-				.audioFilters(`atempo=${1.0.toFixed(1)}`)
-				.audioChannels(this.CHANNELS)
-				.audioFrequency(this.SAMPLE_RATE)
-				.on("error", reject);
+				const ffmpegCommand = ffmpeg(`audio/${file}`)
+					.audioCodec('pcm_s16le')
+					.format('s16le')
+					.audioFilters(`atempo=${1.0.toFixed(1)}`)
+					.audioChannels(this.CHANNELS)
+					.audioFrequency(this.SAMPLE_RATE)
+					.on("error", reject);
 
-			const audioStream = ffmpegCommand.pipe();
+				const audioStream = ffmpegCommand.pipe();
 
-			audioStream.on("data", (chunk) => {
-				chunks.push(chunk)
+				audioStream.on("data", (chunk) => {
+					chunks.push(chunk)
+				})
+
+				audioStream.on('end', () => {
+					let outputBuffer = Buffer.concat(chunks);
+					resolve(outputBuffer)
+				})
 			})
-
-			audioStream.on('end', () => {
-				let outputBuffer = Buffer.concat(chunks);
-				resolve(outputBuffer)
-			})
-		})
-		//Store PCM in file
-		await fs.promises.writeFile(`pcm/${file}.pcm`, pcmBuffer)
+			//Store PCM in file
+			await fs.promises.writeFile(`pcm/${file}.pcm`, pcmBuffer)
+		}
 		this.queue.push(`pcm/${file}.pcm`)
-		this.runQueue()
 		this.bot.emit("audioplayer_enqueue")
+		this.runQueue()
 	}
 
 	private deQueue(): string {
 		return this.queue.shift()
-	}
-
-	setQueueLoop(shouldLoop: boolean) {
-		this.shouldLoop = shouldLoop
 	}
 
 	async runQueue() {
@@ -126,6 +124,8 @@ export default class AudioPlayer {
 
 		let frameDelay = BigInt(16_142_772)
 		frameDelay = BigInt(16_431_725)
+
+		this.songPlaying = true
 		
 		const frames = [];
 		for (let i = 0; i < (await pcmBuffer).length; i += frameSize) {
@@ -155,9 +155,13 @@ export default class AudioPlayer {
 				console.log("Took too long")
 			}
 		}
+		console.log("song finished")
 		this.shouldStopSong = false
 		this.paused = false
 		this.songPlaying = false
+		if (this.shouldLoop) {
+			this.queue.push(file)
+		}
 		this.bot.emit("audioplayer_song_end")
 	}
 
@@ -184,6 +188,10 @@ export default class AudioPlayer {
 		this.bot.once("audioplayer_song_end", () => {
 			this.bot.emit("audioplayer_skip")
 		})
+	}
+
+	setQueueLoop(shouldLoop: boolean) {
+		this.shouldLoop = shouldLoop
 	}
 }
 
