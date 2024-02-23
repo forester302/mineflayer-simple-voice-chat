@@ -7,7 +7,8 @@
 
 # Getting Started
 ### Installation
-1) put mineflayer-simple-voice-chat into your project folder
+1) Compile with ```tsc --skipLibCheck```
+2) put the mineflayer-simple-voice-chat folder into your project folder
 
 ### Simple Sound Player
 A bot that plays a sound file on connecting to voice chat
